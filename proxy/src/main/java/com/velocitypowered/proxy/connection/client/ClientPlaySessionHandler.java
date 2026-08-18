@@ -47,6 +47,8 @@ import com.velocitypowered.proxy.protocol.StateRegistry;
 import com.velocitypowered.proxy.protocol.netty.MinecraftDecoder;
 import com.velocitypowered.proxy.protocol.packet.BossBarPacket;
 import com.velocitypowered.proxy.protocol.packet.ClientSettingsPacket;
+import com.velocitypowered.proxy.protocol.packet.ClientboundForgetLevelChunkPacket;
+import com.velocitypowered.proxy.protocol.packet.ClientboundLevelChunkWithLightPacket;
 import com.velocitypowered.proxy.protocol.packet.JoinGamePacket;
 import com.velocitypowered.proxy.protocol.packet.KeepAlivePacket;
 import com.velocitypowered.proxy.protocol.packet.ObjectivePacket;
@@ -131,6 +133,8 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
   private final List<UUID> serverBossBars = new ArrayList<>();
   private int clientEntityId = -1;
   private @Nullable String clientDimension;
+  private final ClientChunkTracker clientChunks = new ClientChunkTracker();
+  private boolean backendSwitchWithoutReconfiguration;
   private final Set<String> serverObjectives = new HashSet<>();
   private final Set<String> serverTeams = new HashSet<>();
 
@@ -671,6 +675,7 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
    */
   public void handleBackendJoinGame(JoinGamePacket joinGame, VelocityServerConnection destination) {
     MinecraftConnection serverMc = destination.ensureConnected();
+    backendSwitchWithoutReconfiguration = spawned && server.getConfiguration().isRemoveReconfig();
 
     if (!spawned) {
       // The player wasn't spawned in yet, so we don't need to do anything special.
@@ -693,6 +698,7 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
       //
       serverMc.write(ServerboundPlayerLoadedPacket.INSTANCE);
       destination.setClientLoaded(true);
+      clientChunks.beginTransferBatch();
     } else {
       // Clear tab list to avoid duplicate entries
       player.getTabList().clearAll();
@@ -706,6 +712,7 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
       }
 
       rememberClientWorld(joinGame);
+      clientChunks.reset();
     }
 
     destination.setEntityId(joinGame.getEntityId()); // Sound API function
@@ -786,7 +793,8 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
     clientEntityId = joinGame.getEntityId();
     clientDimension = dimensionKey(joinGame);
     ClientWorldSwitches.rememberClientEntityId(player.getUniqueId(), clientEntityId);
-    LOGGER.info("SW-DIAG joingame for {}: dimension {} entityId {}", player, clientDimension, clientEntityId);
+    LOGGER.debug("Join game for {}: dimension {}, entity ID {}", player, clientDimension,
+        clientEntityId);
   }
 
   /**
@@ -799,7 +807,37 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
    */
   public void rememberClientDimension(RespawnPacket respawn) {
     clientDimension = dimensionKey(respawn);
-    LOGGER.info("SW-DIAG respawn seen for {}: client dimension now {}", player, clientDimension);
+    clientChunks.reset();
+    LOGGER.debug("Respawn for {}: client dimension now {}", player, clientDimension);
+  }
+
+  /** Returns true when a destination chunk is redundant during a preserved-world switch. */
+  public boolean handleBackendChunk(ClientboundLevelChunkWithLightPacket packet) {
+    return clientChunks.recordChunk(packet.getChunkX(), packet.getChunkZ());
+  }
+
+  /** Removes an unloaded chunk from the proxy's view of client state. */
+  public void handleBackendForgetChunk(ClientboundForgetLevelChunkPacket packet) {
+    clientChunks.forgetChunk(packet.getChunkX(), packet.getChunkZ());
+  }
+
+  /** Ends transfer filtering at the protocol-defined batch boundary and flushes both sides. */
+  public void handleBackendChunkBatchFinished() {
+    if (clientChunks.finishTransferBatch()) {
+      // Run after the current packet dispatch so the batch-finished packet is included.
+      player.getConnection().eventLoop().execute(() -> {
+        player.getConnection().flush();
+        VelocityServerConnection backend = player.getConnectedServer();
+        if (backend != null && backend.getConnection() != null) {
+          backend.getConnection().flush();
+        }
+      });
+    }
+  }
+
+  /** Whether static play-state data from this backend was retained from the previous backend. */
+  public boolean shouldDropBackendStaticData() {
+    return backendSwitchWithoutReconfiguration;
   }
 
   private static @Nullable String dimensionKey(RespawnPacket respawn) {
@@ -834,19 +872,19 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
     }
 
     if (player.getConnection().getType() == ConnectionTypes.LEGACY_FORGE
-        || player.getProtocolVersion().lessThan(ProtocolVersion.MINECRAFT_1_16)) {
+        || player.getProtocolVersion().lessThan(ProtocolVersion.MINECRAFT_1_20_2)) {
       return false;
     }
 
     if (joinGame.getEntityId() != clientEntityId) {
-      LOGGER.info("SW-DIAG not keeping world for {}: entity id {} != client {}",
+      LOGGER.debug("Not keeping world for {}: entity ID {} != client {}",
           player, joinGame.getEntityId(), clientEntityId);
       return false;
     }
 
     String dimension = dimensionKey(joinGame);
     if (!Objects.equals(dimension, clientDimension)) {
-      LOGGER.info("SW-DIAG not keeping world for {}: dimension {} != client {}",
+      LOGGER.debug("Not keeping world for {}: dimension {} != client {}",
           player, dimension, clientDimension);
       return false;
     }

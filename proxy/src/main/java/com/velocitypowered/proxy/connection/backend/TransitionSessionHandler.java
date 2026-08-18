@@ -38,6 +38,7 @@ import com.velocitypowered.proxy.protocol.packet.DisconnectPacket;
 import com.velocitypowered.proxy.protocol.packet.JoinGamePacket;
 import com.velocitypowered.proxy.protocol.packet.KeepAlivePacket;
 import com.velocitypowered.proxy.protocol.packet.PluginMessagePacket;
+import com.velocitypowered.proxy.protocol.packet.UpdateRecipesPacket;
 import java.util.concurrent.CompletableFuture;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -211,6 +212,13 @@ public class TransitionSessionHandler implements MinecraftSessionHandler {
 
     serverConn.getPlayer().getConnection().write(packet.retain());
     return true;
+  }
+
+  @Override
+  public boolean handle(UpdateRecipesPacket packet) {
+    return server.getConfiguration().isRemoveReconfig()
+        && serverConn.getPlayer().getConnection().getActiveSessionHandler()
+        instanceof ClientPlaySessionHandler;
   }
 
   @Override

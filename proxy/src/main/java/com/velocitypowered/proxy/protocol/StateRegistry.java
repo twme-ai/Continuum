@@ -60,7 +60,10 @@ import com.velocitypowered.proxy.protocol.packet.AvailableCommandsPacket;
 import com.velocitypowered.proxy.protocol.packet.BossBarPacket;
 import com.velocitypowered.proxy.protocol.packet.BundleDelimiterPacket;
 import com.velocitypowered.proxy.protocol.packet.ClientSettingsPacket;
+import com.velocitypowered.proxy.protocol.packet.ClientboundChunkBatchFinishedPacket;
 import com.velocitypowered.proxy.protocol.packet.ClientboundCookieRequestPacket;
+import com.velocitypowered.proxy.protocol.packet.ClientboundForgetLevelChunkPacket;
+import com.velocitypowered.proxy.protocol.packet.ClientboundLevelChunkWithLightPacket;
 import com.velocitypowered.proxy.protocol.packet.ClientboundSetPassengersPacket;
 import com.velocitypowered.proxy.protocol.packet.ClientboundSoundEntityPacket;
 import com.velocitypowered.proxy.protocol.packet.ClientboundStopSoundPacket;
@@ -100,6 +103,7 @@ import com.velocitypowered.proxy.protocol.packet.TabCompleteRequestPacket;
 import com.velocitypowered.proxy.protocol.packet.TabCompleteResponsePacket;
 import com.velocitypowered.proxy.protocol.packet.TeamPacket;
 import com.velocitypowered.proxy.protocol.packet.TransferPacket;
+import com.velocitypowered.proxy.protocol.packet.UpdateRecipesPacket;
 import com.velocitypowered.proxy.protocol.packet.UpsertPlayerInfoPacket;
 import com.velocitypowered.proxy.protocol.packet.chat.ChatAcknowledgementPacket;
 import com.velocitypowered.proxy.protocol.packet.chat.PlayerChatCompletionPacket;
@@ -554,6 +558,28 @@ public enum StateRegistry {
           map(0x2B, MINECRAFT_1_21_9, false),
           map(0x2C, MINECRAFT_26_1, false));
       clientbound.register(
+          ClientboundChunkBatchFinishedPacket.class,
+          ClientboundChunkBatchFinishedPacket::new,
+          map(0x0C, MINECRAFT_1_20_2, false),
+          map(0x0B, MINECRAFT_1_21_5, false));
+      clientbound.register(
+          ClientboundForgetLevelChunkPacket.class,
+          ClientboundForgetLevelChunkPacket::new,
+          map(0x1F, MINECRAFT_1_20_2, false),
+          map(0x21, MINECRAFT_1_20_5, false),
+          map(0x22, MINECRAFT_1_21_2, false),
+          map(0x21, MINECRAFT_1_21_5, false),
+          map(0x25, MINECRAFT_1_21_9, false));
+      clientbound.register(
+          ClientboundLevelChunkWithLightPacket.class,
+          ClientboundLevelChunkWithLightPacket::new,
+          map(0x25, MINECRAFT_1_20_2, false),
+          map(0x27, MINECRAFT_1_20_5, false),
+          map(0x28, MINECRAFT_1_21_2, false),
+          map(0x27, MINECRAFT_1_21_5, false),
+          map(0x2C, MINECRAFT_1_21_9, false),
+          map(0x2D, MINECRAFT_26_1, false));
+      clientbound.register(
           JoinGamePacket.class,
           JoinGamePacket::new,
           map(0x01, MINECRAFT_1_7_2, false),
@@ -893,6 +919,15 @@ public enum StateRegistry {
           ClientboundSetPassengersPacket.class,
           ClientboundSetPassengersPacket::new,
           map(0x6B, MINECRAFT_26_2, false));
+      clientbound.register(
+          UpdateRecipesPacket.class,
+          UpdateRecipesPacket::new,
+          map(0x6F, MINECRAFT_1_20_2, false),
+          map(0x73, MINECRAFT_1_20_3, false),
+          map(0x77, MINECRAFT_1_20_5, false),
+          map(0x7E, MINECRAFT_1_21_2, false),
+          map(0x83, MINECRAFT_1_21_9, false),
+          map(0x85, MINECRAFT_26_1, false));
     }
   },
   LOGIN {

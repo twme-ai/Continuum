@@ -22,7 +22,10 @@ import com.velocitypowered.proxy.protocol.packet.AvailableCommandsPacket;
 import com.velocitypowered.proxy.protocol.packet.BossBarPacket;
 import com.velocitypowered.proxy.protocol.packet.BundleDelimiterPacket;
 import com.velocitypowered.proxy.protocol.packet.ClientSettingsPacket;
+import com.velocitypowered.proxy.protocol.packet.ClientboundChunkBatchFinishedPacket;
 import com.velocitypowered.proxy.protocol.packet.ClientboundCookieRequestPacket;
+import com.velocitypowered.proxy.protocol.packet.ClientboundForgetLevelChunkPacket;
+import com.velocitypowered.proxy.protocol.packet.ClientboundLevelChunkWithLightPacket;
 import com.velocitypowered.proxy.protocol.packet.ClientboundSetPassengersPacket;
 import com.velocitypowered.proxy.protocol.packet.ClientboundSoundEntityPacket;
 import com.velocitypowered.proxy.protocol.packet.ClientboundStopSoundPacket;
@@ -64,6 +67,7 @@ import com.velocitypowered.proxy.protocol.packet.TabCompleteRequestPacket;
 import com.velocitypowered.proxy.protocol.packet.TabCompleteResponsePacket;
 import com.velocitypowered.proxy.protocol.packet.TeamPacket;
 import com.velocitypowered.proxy.protocol.packet.TransferPacket;
+import com.velocitypowered.proxy.protocol.packet.UpdateRecipesPacket;
 import com.velocitypowered.proxy.protocol.packet.UpsertPlayerInfoPacket;
 import com.velocitypowered.proxy.protocol.packet.chat.ChatAcknowledgementPacket;
 import com.velocitypowered.proxy.protocol.packet.chat.PlayerChatCompletionPacket;
@@ -163,6 +167,18 @@ public interface MinecraftSessionHandler {
     return false;
   }
 
+  default boolean handle(ClientboundChunkBatchFinishedPacket packet) {
+    return false;
+  }
+
+  default boolean handle(ClientboundForgetLevelChunkPacket packet) {
+    return false;
+  }
+
+  default boolean handle(ClientboundLevelChunkWithLightPacket packet) {
+    return false;
+  }
+
   default boolean handle(JoinGamePacket packet) {
     return false;
   }
@@ -192,6 +208,10 @@ public interface MinecraftSessionHandler {
   }
 
   default boolean handle(RespawnPacket packet) {
+    return false;
+  }
+
+  default boolean handle(UpdateRecipesPacket packet) {
     return false;
   }
 

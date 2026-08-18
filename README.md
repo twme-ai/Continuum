@@ -18,6 +18,10 @@ licence as Velocity, which it is derived from. The full text is in
   (`keep-client-world-on-switch`).
 * The `ClientWorldSwitches` API, exposing the client-visible entity ID to
   coordinating plugins for world-preserving switches.
+* Client chunk tracking across backend switches. The destination's first copy
+  of each chunk retained by the client is suppressed.
+* Redundant recipe data is discarded on reconfiguration-free switches, along
+  with registry and tag data handled by the configuration bridge.
 
 ## Remove Reconfig
 
@@ -49,6 +53,13 @@ conditions hold:
 When those hold, the destination spawns the player into a world the client has
 already loaded — no registry resend, no world reload, no freezing screen.
 
+The proxy decodes chunk load, chunk unload, and chunk-batch-finished packets for
+Minecraft 1.20.2 through 26.2. It retains chunk payloads byte-for-byte and reads
+only the two leading coordinates. During a preserved switch, a destination
+chunk is dropped when that coordinate was present at switch time. Each retained
+coordinate is suppressed once, while genuinely new or later refreshed chunks
+pass through. Both connections flush at the first destination batch boundary.
+
 Requires `remove-reconfig = true` to be effective; without it the switch still
 passes through the configuration state, which reloads the world. This is
 **off by default**.
@@ -59,6 +70,10 @@ passes through the configuration state, which reloads the world. This is
   keeps the registry data it received from the first server it joined, so a
   backend on a different version will desync the client and cause visual
   corruption or kicks.
+* Registry contents, tags, recipes, dimensions, and compatible scoreboard/team
+  definitions must match on every backend.
+* The companion ShardSync Velocity and Paper plugins coordinate the client
+  entity ID before Paper finishes configuration.
 * Leave the seamless-switch options off if your backends are not all on the
   same version.
 

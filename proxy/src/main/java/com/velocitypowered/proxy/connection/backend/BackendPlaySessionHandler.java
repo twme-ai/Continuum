@@ -52,7 +52,10 @@ import com.velocitypowered.proxy.protocol.packet.AvailableCommandsPacket;
 import com.velocitypowered.proxy.protocol.packet.BossBarPacket;
 import com.velocitypowered.proxy.protocol.packet.BundleDelimiterPacket;
 import com.velocitypowered.proxy.protocol.packet.ClientSettingsPacket;
+import com.velocitypowered.proxy.protocol.packet.ClientboundChunkBatchFinishedPacket;
 import com.velocitypowered.proxy.protocol.packet.ClientboundCookieRequestPacket;
+import com.velocitypowered.proxy.protocol.packet.ClientboundForgetLevelChunkPacket;
+import com.velocitypowered.proxy.protocol.packet.ClientboundLevelChunkWithLightPacket;
 import com.velocitypowered.proxy.protocol.packet.ClientboundStoreCookiePacket;
 import com.velocitypowered.proxy.protocol.packet.DisconnectPacket;
 import com.velocitypowered.proxy.protocol.packet.KeepAlivePacket;
@@ -68,6 +71,7 @@ import com.velocitypowered.proxy.protocol.packet.ServerDataPacket;
 import com.velocitypowered.proxy.protocol.packet.TabCompleteResponsePacket;
 import com.velocitypowered.proxy.protocol.packet.TeamPacket;
 import com.velocitypowered.proxy.protocol.packet.TransferPacket;
+import com.velocitypowered.proxy.protocol.packet.UpdateRecipesPacket;
 import com.velocitypowered.proxy.protocol.packet.UpsertPlayerInfoPacket;
 import com.velocitypowered.proxy.protocol.packet.chat.ComponentHolder;
 import com.velocitypowered.proxy.protocol.packet.config.StartUpdatePacket;
@@ -200,6 +204,34 @@ public class BackendPlaySessionHandler implements MinecraftSessionHandler {
     // Record dimension so the next switch can still tell whether the client world can be preserved.
     playerSessionHandler.rememberClientDimension(packet);
     return false;
+  }
+
+  @Override
+  public boolean handle(ClientboundLevelChunkWithLightPacket packet) {
+    if (!playerSessionHandler.handleBackendChunk(packet)) {
+      playerConnection.delayedWrite(packet.retain());
+    }
+    return true;
+  }
+
+  @Override
+  public boolean handle(ClientboundForgetLevelChunkPacket packet) {
+    playerSessionHandler.handleBackendForgetChunk(packet);
+    return false;
+  }
+
+  @Override
+  public boolean handle(ClientboundChunkBatchFinishedPacket packet) {
+    playerSessionHandler.handleBackendChunkBatchFinished();
+    return false;
+  }
+
+  @Override
+  public boolean handle(UpdateRecipesPacket packet) {
+    if (!playerSessionHandler.shouldDropBackendStaticData()) {
+      playerConnection.delayedWrite(packet.retain());
+    }
+    return true;
   }
 
   @Override
